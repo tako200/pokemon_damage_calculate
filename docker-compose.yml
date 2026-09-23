@@ -1,0 +1,32 @@
+services:
+  web:
+    container_name: pokemon_damage_calculate_web
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - type: bind
+        source: ./app
+        target: /app
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    depends_on:
+      - db
+
+  db:
+    container_name: pokemon_damage_calculate_db
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    ports:
+      - '5432:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/
+
+volumes:
+  db_data:
