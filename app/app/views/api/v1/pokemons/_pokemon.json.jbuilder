@@ -1,0 +1,12 @@
+json.id pokemon.pokeapi_id
+json.species_id pokemon.species_id
+json.name pokemon.name
+json.name_ja pokemon.name_ja
+json.form_name_ja pokemon.form_name_ja
+json.display_name pokemon.display_name
+json.is_default pokemon.is_default
+json.types pokemon.types
+json.abilities pokemon.abilities
+json.base_stats pokemon.base_stats
+json.sprite_url pokemon.sprite_url
+json.artwork_url pokemon.artwork_url

@@ -31,4 +31,5 @@ RUN bundle install
 
 COPY app .
 
-CMD ["rails", "server", "-b", "0.0.0.0"]
+# 前回の異常終了で残った server.pid を削除してから起動する
+CMD ["sh", "-c", "rm -f tmp/pids/server.pid && rails server -b 0.0.0.0"]
