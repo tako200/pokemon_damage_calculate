@@ -1,5 +1,10 @@
 class Pokemon < ApplicationRecord
+  include KanaSearchable
+
   STAT_KEYS = %i[hp attack defense special_attack special_defense speed].freeze
+
+  has_many :pokemon_moves, dependent: :delete_all
+  has_many :moves, through: :pokemon_moves
 
   validates :pokeapi_id, presence: true, uniqueness: true
   validates :species_id, presence: true
@@ -7,24 +12,37 @@ class Pokemon < ApplicationRecord
   validates :name_ja, presence: true
   validates(*STAT_KEYS, presence: true, numericality: { only_integer: true, greater_than: 0 })
 
-  # 日本語名・英語名・フォーム名・図鑑番号であいまい検索する。
-  # ひらがなで入力されてもカタカナ名にヒットするよう、両方の表記で検索する。
+  # 日本語名・英語名・フォーム名・図鑑番号であいまい検索する
   scope :search, ->(query) {
     query = query.to_s.strip
     next all if query.empty?
     next where(species_id: query.to_i) if query.match?(/\A\d+\z/)
 
-    patterns = [ query, to_katakana(query) ].uniq.map { |q| "%#{sanitize_sql_like(q)}%" }
-    conditions = patterns.map do
-      "(pokemons.name_ja ILIKE ? OR pokemons.form_name_ja ILIKE ? OR pokemons.name ILIKE ?)"
-    end
-    where(conditions.join(" OR "), *patterns.flat_map { |p| [ p ] * 3 })
+    kana_search(query, %w[name_ja form_name_ja name])
   }
 
   scope :dex_order, -> { order(:species_id, :pokeapi_id) }
 
-  def self.to_katakana(str)
-    str.tr("ぁ-ゖ", "ァ-ヶ")
+  # "10100" なら PokeAPI の ID、"raichu-alola" なら英語名で探す
+  def self.find_by_key!(key)
+    key.to_s.match?(/\A\d+\z/) ? find_by!(pokeapi_id: key) : find_by!(name: key)
+  end
+
+  # チャンピオンズで覚える技。
+  # メガシンカは元の姿と同じ技を覚えるので、PokeAPI に技のデータが無いときは通常の姿の技を使う
+  # （例: garchomp-mega-z）
+  def learnable_moves
+    return moves unless mega? && !pokemon_moves.exists?
+
+    base_form&.moves || Move.none
+  end
+
+  def mega?
+    name.match?(/-mega(-|\z)/)
+  end
+
+  def base_form
+    is_default ? self : Pokemon.find_by(species_id: species_id, is_default: true)
   end
 
   # 例: "ライチュウ（アローラのすがた）"

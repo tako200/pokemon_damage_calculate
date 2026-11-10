@@ -1,6 +1,6 @@
 require "test_helper"
 
-class PokeApi::ImporterTest < ActiveSupport::TestCase
+class PokeApi::PokemonImporterTest < ActiveSupport::TestCase
   # URL ごとに固定レスポンスを返すテスト用クライアント
   class FakeClient
     attr_reader :requests
@@ -18,7 +18,14 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
 
   BASE = "https://pokeapi.co/api/v2".freeze
 
-  def pokemon_payload(id:, name:, species_id:, is_default:, form_id:, types:, stats:)
+  def learned(move_name, *version_groups)
+    {
+      "move" => { "name" => move_name, "url" => "#{BASE}/move/#{move_name}/" },
+      "version_group_details" => version_groups.map { |vg| { "version_group" => { "name" => vg } } }
+    }
+  end
+
+  def pokemon_payload(id:, name:, species_id:, is_default:, form_id:, types:, stats:, moves: [])
     {
       "id" => id,
       "name" => name,
@@ -31,6 +38,7 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
         { "slot" => 3, "is_hidden" => true, "ability" => { "name" => "lightning-rod", "url" => "#{BASE}/ability/31/" } }
       ],
       "weight" => 300,
+      "moves" => moves,
       "stats" => %w[hp attack defense special-attack special-defense speed].zip(stats).map do |stat, value|
         { "base_stat" => value, "stat" => { "name" => stat } }
       end,
@@ -55,7 +63,12 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
       "#{BASE}/ability/9/" => { "names" => [ { "name" => "せいでんき", "language" => { "name" => "ja-hrkt" } } ] },
       "#{BASE}/ability/31/" => { "names" => [ { "name" => "Lightning Rod", "language" => { "name" => "en" } } ] },
       "#{BASE}/pokemon/26/" => pokemon_payload(id: 26, name: "raichu", species_id: 26, is_default: true,
-                                               form_id: 26, types: %w[electric], stats: [ 60, 90, 55, 90, 80, 110 ]),
+                                               form_id: 26, types: %w[electric], stats: [ 60, 90, 55, 90, 80, 110 ],
+                                               moves: [
+                                                 learned("thunderbolt", "sword-shield", "champions"),
+                                                 learned("low-kick", "sword-shield"),
+                                                 learned("unknown-move", "champions")
+                                               ]),
       "#{BASE}/pokemon/10100/" => pokemon_payload(id: 10100, name: "raichu-alola", species_id: 26, is_default: false,
                                                   form_id: 10202, types: %w[electric psychic], stats: [ 60, 85, 50, 95, 85, 110 ]),
       "#{BASE}/pokemon-species/26/" => { "names" => [
@@ -69,7 +82,7 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
   end
 
   test "ポケモンを取り込み、失敗したものはスキップする" do
-    result = PokeApi::Importer.new(client: @client, logger: Logger.new(nil)).call
+    result = PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil)).call
 
     assert_equal({ imported: 2, excluded: 2, removed: 0, failed: [ "broken" ] }, result)
 
@@ -90,7 +103,7 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
   end
 
   test "同じ種族の日本語名は一度だけ取得し、通常フォームのフォーム名は取得しない" do
-    PokeApi::Importer.new(client: @client, logger: Logger.new(nil)).call
+    PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil)).call
 
     assert_equal 1, @client.requests.count("#{BASE}/pokemon-species/26/")
     assert_equal 1, @client.requests.count("#{BASE}/ability/9/")
@@ -98,7 +111,7 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
   end
 
   test "再実行しても重複せず更新される" do
-    importer = PokeApi::Importer.new(client: @client, logger: Logger.new(nil))
+    importer = PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil))
     importer.call
     importer.call
 
@@ -109,7 +122,7 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
     Pokemon.create!(pokeapi_id: 10199, species_id: 25, name: "pikachu-gmax", name_ja: "ピカチュウ",
                     hp: 35, attack: 55, defense: 40, special_attack: 50, special_defense: 50, speed: 90)
 
-    result = PokeApi::Importer.new(client: @client, logger: Logger.new(nil)).call
+    result = PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil)).call
 
     assert_equal 1, result[:removed]
     assert_not Pokemon.exists?(name: "pikachu-gmax")
@@ -120,10 +133,28 @@ class PokeApi::ImporterTest < ActiveSupport::TestCase
   test "excluded? はダメージ計算に不要なフォームだけを判定する" do
     %w[charizard-gmax mimikyu-totem-disguised pikachu-starter eevee-starter pikachu-cosplay
        pikachu-alola-cap eternatus-eternamax].each do |name|
-      assert PokeApi::Importer.excluded?(name), name
+      assert PokeApi::PokemonImporter.excluded?(name), name
     end
     %w[pikachu charizard-mega-x raichu-alola darmanitan-galar-zen mimikyu-busted eternatus].each do |name|
-      assert_not PokeApi::Importer.excluded?(name), name
+      assert_not PokeApi::PokemonImporter.excluded?(name), name
     end
+  end
+
+  test "チャンピオンズで覚える技だけを保存し、DB にない技は無視する" do
+    PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil)).call
+
+    raichu = Pokemon.find_by!(pokeapi_id: 26)
+    assert_equal [ "thunderbolt" ], raichu.moves.pluck(:name)
+  end
+
+  test "再実行すると覚えなくなった技は削除される" do
+    importer = PokeApi::PokemonImporter.new(client: @client, logger: Logger.new(nil))
+    importer.call
+    raichu = Pokemon.find_by!(pokeapi_id: 26)
+    PokemonMove.create!(pokemon: raichu, move: moves(:earthquake))
+
+    importer.call
+
+    assert_equal [ "thunderbolt" ], raichu.reload.moves.pluck(:name)
   end
 end

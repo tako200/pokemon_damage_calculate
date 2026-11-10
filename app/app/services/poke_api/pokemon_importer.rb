@@ -1,8 +1,11 @@
 module PokeApi
   # PokeAPI からポケモンを取得して pokemons テーブルへ upsert する。
+  # あわせて、チャンピオンズで覚えられる技を pokemon_moves に保存する（先に MoveImporter を実行しておくこと）。
   # ポケモンチャンピオンズのダメージ計算用なので、対戦で使えないフォームは取り込まない。
-  class Importer
-    JA_LANGUAGES = %w[ja-hrkt ja].freeze
+  class PokemonImporter
+    # PokeAPI の version_group。この作品で覚えられる技だけを保存する
+    VERSION_GROUP = "champions".freeze
+
     STAT_MAP = {
       "hp" => :hp,
       "attack" => :attack,
@@ -35,19 +38,22 @@ module PokeApi
 
     # limit を指定すると先頭から指定件数のみ取り込む（動作確認用）
     def call(limit: nil)
+      @move_ids = Move.pluck(:name, :id).to_h
+      @logger.warn("[PokeApi::PokemonImporter] moves テーブルが空です。先に pokeapi:import_moves を実行してください") if @move_ids.empty?
+
       entries = @client.get("pokemon", limit: limit || 100_000, offset: 0).fetch("results")
       excluded, targets = entries.partition { |entry| self.class.excluded?(entry.fetch("name")) }
       failures = []
 
       targets.each_with_index do |entry, index|
         import_one(entry.fetch("url"))
-        @logger.info("[PokeApi::Importer] #{index + 1}/#{targets.size} #{entry["name"]}") if ((index + 1) % 50).zero?
+        @logger.info("[PokeApi::PokemonImporter] #{index + 1}/#{targets.size} #{entry["name"]}") if ((index + 1) % 50).zero?
       rescue Client::Error, KeyError, ActiveRecord::ActiveRecordError => e
         failures << entry["name"]
-        @logger.warn("[PokeApi::Importer] skip #{entry["name"]}: #{e.message}")
+        @logger.warn("[PokeApi::PokemonImporter] skip #{entry["name"]}: #{e.message}")
       end
 
-      # 以前の取り込みで入っていた除外対象を削除する
+      # 以前の取り込みで入っていた除外対象を削除する（pokemon_moves は外部キーの on_delete: :cascade で消える）
       removed = Pokemon.where(name: excluded.map { |entry| entry["name"] }).delete_all
 
       { imported: targets.size - failures.size, excluded: excluded.size, removed: removed, failed: failures }
@@ -55,7 +61,11 @@ module PokeApi
 
     def import_one(url)
       data = @client.get(url)
-      Pokemon.upsert(build_attributes(data), unique_by: :pokeapi_id)
+
+      Pokemon.transaction do
+        pokemon_id = Pokemon.upsert(build_attributes(data), unique_by: :pokeapi_id, returning: :id).rows.first.first
+        sync_moves(pokemon_id, data.fetch("moves"))
+      end
     end
 
     private
@@ -87,17 +97,30 @@ module PokeApi
       end
     end
 
+    # チャンピオンズで覚えられる技に入れ替える（覚えなくなった技は削除）
+    def sync_moves(pokemon_id, moves)
+      names = moves.select { |m| m.fetch("version_group_details").any? { |v| v.dig("version_group", "name") == VERSION_GROUP } }
+                   .map { |m| m.dig("move", "name") }
+      move_ids = @move_ids.values_at(*names).compact.uniq
+
+      PokemonMove.where(pokemon_id: pokemon_id).where.not(move_id: move_ids).delete_all
+      return if move_ids.empty?
+
+      PokemonMove.insert_all(move_ids.map { |move_id| { pokemon_id: pokemon_id, move_id: move_id } },
+                             unique_by: %i[pokemon_id move_id])
+    end
+
     # 同じ種族のフォーム違いで何度も取得しないようキャッシュする
     def species_name_ja(species_id, url)
       @species_names.fetch(species_id) do
-        @species_names[species_id] = japanese_name(@client.get(url).fetch("names"))
+        @species_names[species_id] = Localization.japanese_name(@client.get(url).fetch("names"))
       end
     end
 
     # 特性は多くのポケモンで共通なのでキャッシュする
     def ability_name_ja(url)
       @ability_names.fetch(url) do
-        @ability_names[url] = japanese_name(@client.get(url).fetch("names"))
+        @ability_names[url] = Localization.japanese_name(@client.get(url).fetch("names"))
       end
     end
 
@@ -105,15 +128,7 @@ module PokeApi
       form_url = data.fetch("forms").first&.fetch("url")
       return nil unless form_url
 
-      japanese_name(@client.get(form_url).fetch("form_names"))
-    end
-
-    def japanese_name(names)
-      JA_LANGUAGES.each do |lang|
-        found = names.find { |n| n.dig("language", "name") == lang }
-        return found["name"] if found
-      end
-      nil
+      Localization.japanese_name(@client.get(form_url).fetch("form_names"))
     end
   end
 end

@@ -1,0 +1,13 @@
+json.id move.pokeapi_id
+json.name move.name
+json.name_ja move.name_ja
+json.type move.type_name
+json.damage_class move.damage_class
+json.power move.power
+json.accuracy move.accuracy
+json.pp move.pp
+json.priority move.priority
+json.target move.target
+json.is_spread move.spread?
+json.min_hits move.min_hits
+json.max_hits move.max_hits

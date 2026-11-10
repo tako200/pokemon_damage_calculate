@@ -7,7 +7,7 @@ class PokemonTest < ActiveSupport::TestCase
   end
 
   test "ひらがなでもカタカナ名にヒットする" do
-    assert_equal [ "garchomp" ], Pokemon.search("がぶ").pluck(:name)
+    assert_equal %w[garchomp garchomp-mega-z], Pokemon.search("がぶ").dex_order.pluck(:name)
   end
 
   test "フォーム名で検索できる" do
@@ -15,7 +15,7 @@ class PokemonTest < ActiveSupport::TestCase
   end
 
   test "英語名で大文字小文字を区別せず検索できる" do
-    assert_equal [ "garchomp" ], Pokemon.search("GARCH").pluck(:name)
+    assert_equal %w[garchomp garchomp-mega-z], Pokemon.search("GARCH").dex_order.pluck(:name)
   end
 
   test "数字は図鑑番号として検索する" do
@@ -33,5 +33,13 @@ class PokemonTest < ActiveSupport::TestCase
   test "display_name はフォーム名を含む" do
     assert_equal "ライチュウ（アローラのすがた）", pokemons(:raichu_alola).display_name
     assert_equal "ライチュウ", pokemons(:raichu).display_name
+  end
+
+  test "mega? はメガシンカのフォームだけを判定する" do
+    assert pokemons(:garchomp_mega_z).mega?
+    assert Pokemon.new(name: "charizard-mega-x").mega?
+    assert Pokemon.new(name: "garchomp-mega").mega?
+    assert_not pokemons(:garchomp).mega?
+    assert_not Pokemon.new(name: "meganium").mega?
   end
 end

@@ -1,0 +1,70 @@
+earthquake:
+  pokeapi_id: 89
+  name: earthquake
+  name_ja: じしん
+  type_name: ground
+  damage_class: physical
+  power: 100
+  accuracy: 100
+  pp: 10
+  priority: 0
+  target: all-other-pokemon
+
+dragon_claw:
+  pokeapi_id: 337
+  name: dragon-claw
+  name_ja: ドラゴンクロー
+  type_name: dragon
+  damage_class: physical
+  power: 80
+  accuracy: 100
+  pp: 15
+  priority: 0
+  target: selected-pokemon
+
+thunderbolt:
+  pokeapi_id: 85
+  name: thunderbolt
+  name_ja: １０まんボルト
+  type_name: electric
+  damage_class: special
+  power: 90
+  accuracy: 100
+  pp: 15
+  priority: 0
+  target: selected-pokemon
+
+swords_dance:
+  pokeapi_id: 14
+  name: swords-dance
+  name_ja: つるぎのまい
+  type_name: normal
+  damage_class: status
+  pp: 20
+  priority: 0
+  target: user
+
+low_kick:
+  pokeapi_id: 67
+  name: low-kick
+  name_ja: けたぐり
+  type_name: fighting
+  damage_class: physical
+  accuracy: 100
+  pp: 20
+  priority: 0
+  target: selected-pokemon
+
+tail_slap:
+  pokeapi_id: 541
+  name: tail-slap
+  name_ja: スイープビンタ
+  type_name: normal
+  damage_class: physical
+  power: 25
+  accuracy: 85
+  pp: 10
+  priority: 0
+  target: selected-pokemon
+  min_hits: 2
+  max_hits: 5

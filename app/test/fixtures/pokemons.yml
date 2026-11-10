@@ -47,6 +47,23 @@ raichu_alola:
   special_defense: 85
   speed: 110
 
+garchomp_mega_z:
+  pokeapi_id: 10309
+  species_id: 445
+  name: garchomp-mega-z
+  name_ja: ガブリアス
+  form_name_ja: メガガブリアスZ
+  is_default: false
+  types: ["dragon"]
+  abilities: [{ "name": "levitate", "name_ja": "ふゆう", "is_hidden": false }]
+  weight: 990
+  hp: 108
+  attack: 130
+  defense: 85
+  special_attack: 141
+  special_defense: 85
+  speed: 151
+
 garchomp:
   pokeapi_id: 445
   species_id: 445

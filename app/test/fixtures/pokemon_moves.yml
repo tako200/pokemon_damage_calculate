@@ -1,0 +1,19 @@
+garchomp_earthquake:
+  pokemon: garchomp
+  move: earthquake
+
+garchomp_dragon_claw:
+  pokemon: garchomp
+  move: dragon_claw
+
+garchomp_swords_dance:
+  pokemon: garchomp
+  move: swords_dance
+
+garchomp_low_kick:
+  pokemon: garchomp
+  move: low_kick
+
+pikachu_thunderbolt:
+  pokemon: pikachu
+  move: thunderbolt
