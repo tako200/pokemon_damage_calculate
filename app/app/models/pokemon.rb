@@ -32,6 +32,10 @@ class Pokemon < ApplicationRecord
     form_name_ja.present? ? "#{name_ja}（#{form_name_ja}）" : name_ja
   end
 
+  def weight_kg
+    weight && weight / 10.0
+  end
+
   def base_stats
     STAT_KEYS.index_with { |key| public_send(key) }
   end

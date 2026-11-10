@@ -5,7 +5,8 @@ pikachu:
   name_ja: ピカチュウ
   is_default: true
   types: ["electric"]
-  abilities: ["static", "lightning-rod"]
+  abilities: [{ "name": "static", "name_ja": "せいでんき", "is_hidden": false }, { "name": "lightning-rod", "name_ja": "ひらいしん", "is_hidden": true }]
+  weight: 60
   hp: 35
   attack: 55
   defense: 40
@@ -20,7 +21,8 @@ raichu:
   name_ja: ライチュウ
   is_default: true
   types: ["electric"]
-  abilities: ["static", "lightning-rod"]
+  abilities: [{ "name": "static", "name_ja": "せいでんき", "is_hidden": false }, { "name": "lightning-rod", "name_ja": "ひらいしん", "is_hidden": true }]
+  weight: 300
   hp: 60
   attack: 90
   defense: 55
@@ -36,7 +38,8 @@ raichu_alola:
   form_name_ja: アローラのすがた
   is_default: false
   types: ["electric", "psychic"]
-  abilities: ["surge-surfer"]
+  abilities: [{ "name": "surge-surfer", "name_ja": "サーフテール", "is_hidden": false }]
+  weight: 210
   hp: 60
   attack: 85
   defense: 50
@@ -51,7 +54,8 @@ garchomp:
   name_ja: ガブリアス
   is_default: true
   types: ["dragon", "ground"]
-  abilities: ["sand-veil", "rough-skin"]
+  abilities: [{ "name": "sand-veil", "name_ja": "すながくれ", "is_hidden": false }, { "name": "rough-skin", "name_ja": "さめはだ", "is_hidden": true }]
+  weight: 950
   hp: 108
   attack: 130
   defense: 95

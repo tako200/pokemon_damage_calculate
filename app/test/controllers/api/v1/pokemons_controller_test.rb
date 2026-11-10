@@ -14,6 +14,8 @@ class Api::V1::PokemonsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[electric psychic], alola["types"]
     assert_equal({ "hp" => 60, "attack" => 85, "defense" => 50,
                    "special_attack" => 95, "special_defense" => 85, "speed" => 110 }, alola["base_stats"])
+    assert_equal [ { "name" => "surge-surfer", "name_ja" => "サーフテール", "is_hidden" => false } ], alola["abilities"]
+    assert_equal 21.0, alola["weight_kg"]
   end
 
   test "index は limit で件数を絞れる" do

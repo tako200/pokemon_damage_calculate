@@ -7,6 +7,7 @@ namespace :pokeapi do
     result = PokeApi::Importer.new(logger: logger).call(limit: limit)
 
     puts "Imported: #{result[:imported]}"
+    puts "Excluded: #{result[:excluded]} (removed from DB: #{result[:removed]})"
     puts "Failed: #{result[:failed].join(", ")}" if result[:failed].any?
   end
 end

@@ -10,12 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_09_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_09_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "pokemons", force: :cascade do |t|
-    t.string "abilities", default: [], null: false, array: true
+    t.jsonb "abilities", default: [], null: false
     t.string "artwork_url"
     t.integer "attack", null: false
     t.datetime "created_at", null: false
@@ -33,6 +33,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_09_000000) do
     t.string "sprite_url"
     t.string "types", default: [], null: false, array: true
     t.datetime "updated_at", null: false
+    t.integer "weight"
     t.index ["name"], name: "index_pokemons_on_name", unique: true
     t.index ["pokeapi_id"], name: "index_pokemons_on_pokeapi_id", unique: true
     t.index ["species_id"], name: "index_pokemons_on_species_id"
